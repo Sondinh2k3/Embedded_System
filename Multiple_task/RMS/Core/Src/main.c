@@ -23,10 +23,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stdio.h"
 #include "sr04.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,7 +57,7 @@ I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
 
-osThreadId HCSR04_SensorHandle; // osThreadId = TaskHandle_t
+osThreadId HCSR04_SensorHandle;
 osThreadId Sound_SensorHandle;
 osThreadId Task_KeyboardHandle;
 osThreadId Task_Display_LCHandle;
@@ -65,8 +68,11 @@ sr04_t sr04;
 float khoang_cach = 0;
 
 uint8_t sound = 0;
+uint8_t check = 0;
 
-QueueHandle_t Queue01Handle; // khoi tao mot Queue (tuong tu de khoi tao mot task thi ta co lenh: TaskHandle_t)
+QueueHandle_t QueueHCSR04Handle; // khoi tao mot Queue (tuong tu de khoi tao mot task thi ta co lenh: TaskHandle_t)
+QueueHandle_t QueueSoundSSHandle;
+QueueHandle_t QueueKeyboardHandle;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -141,7 +147,9 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
-	Queue01Handle = xQueueCreate(10, sizeof(uint32_t)); // Tao mot Queue moi
+	QueueHCSR04Handle = xQueueCreate(10, sizeof(uint32_t)); // Tao mot Queue moi
+	QueueSoundSSHandle = xQueueCreate(10, sizeof(uint32_t));
+	QueueKeyboardHandle = xQueueCreate(10, sizeof(char));
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -378,12 +386,15 @@ void HCSR04(void const * argument)
 {
   /* USER CODE BEGIN 5 */
 	TickType_t xLastWakeTime = osKernelSysTick();
+	char message[50];
   /* Infinite loop */
   for(;;)
   {
 		sr04_trigger(&sr04);
     khoang_cach = sr04.distance;
-    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(HCSR04_PERIOD_MS));
+		snprintf(message, 50, "Distance: %.2f cm", khoang_cach);
+		// xQueueSend(QueueHCSR04Handle, &message, portMAX_DELAY);
+    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
   }
   /* USER CODE END 5 */
 }
@@ -398,10 +409,11 @@ void HCSR04(void const * argument)
 void Read_SoundSS(void const * argument)
 {
   /* USER CODE BEGIN Read_SoundSS */
-	TickType_t xLastWakeTime = osKernelSysTick();
+	TickType_t xLastWakeTime1 = osKernelSysTick();
   /* Infinite loop */
   for(;;)
   {
+		check = 10;
 		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_10) == 0){
 			// co am thanh
 			sound = 3;
@@ -410,7 +422,8 @@ void Read_SoundSS(void const * argument)
 			// khong co am thanh
 			sound = 8;
 		}
-    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(SOUNDSS_PERIOD_MS));
+    osDelayUntil(&xLastWakeTime1, pdMS_TO_TICKS(SOUNDSS_PERIOD_MS));
+		
   }
   /* USER CODE END Read_SoundSS */
 }
@@ -425,12 +438,13 @@ void Read_SoundSS(void const * argument)
 void Keyboard(void const * argument)
 {
   /* USER CODE BEGIN Keyboard */
-	TickType_t xLastWakeTime = osKernelSysTick();
+	TickType_t xLastWakeTime2 = osKernelSysTick();
   /* Infinite loop */
   for(;;)
   {
 		// Xu ly task doc Keyboard
-    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(KEYBOARD_PERIOD_MS));
+    osDelayUntil(&xLastWakeTime2, pdMS_TO_TICKS(KEYBOARD_PERIOD_MS));
+		xLastWakeTime2 = osKernelSysTick();
   }
   /* USER CODE END Keyboard */
 }
@@ -451,6 +465,7 @@ void Display_LCD(void const * argument)
   {
 		// Xu ly task hien thi LCD
     osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(LCD_PERIOD_MS));
+		xLastWakeTime = osKernelSysTick();
   }
   /* USER CODE END Display_LCD */
 }
@@ -471,6 +486,7 @@ void UART(void const * argument)
   {
 		// Xu ly task truyen thong tin len may tinh su dung USB to TTL CP2102
     osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(UART_PERIOD_MS));
+		
   }
   /* USER CODE END UART */
 }
