@@ -29,7 +29,8 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
-#include "i2c-lcd.h"
+#include "lcd_i2cModule.h"
+#include "keypad_4x4.h"
 #include "string.h"
 
 /* USER CODE END Includes */
@@ -43,7 +44,7 @@
 /* USER CODE BEGIN PD */
 #define HCSR04_PERIOD_MS 50
 #define SOUNDSS_PERIOD_MS 50
-#define KEYBOARD_PERIOD_MS 100
+#define KEYBOARD_PERIOD_MS 150
 #define LCD_PERIOD_MS 250
 #define UART_PERIOD_MS 50
 
@@ -149,7 +150,12 @@ int main(void)
   sr04_init(&sr04);
 	
 	  //Init lcd
-		lcd_init();
+		LCD_i2cDeviceCheck();
+		LCD_Init();
+		LCD_BackLight(LCD_BL_ON);
+		
+		// Init Keypad
+		keypad_init();
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -166,30 +172,31 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
-	QueueHCSR04Handle = xQueueCreate(10, sizeof(uint32_t)); // Tao mot Queue moi
-	QueueSoundSSHandle = xQueueCreate(10, sizeof(uint32_t));
-	QueueKeyboardHandle = xQueueCreate(10, sizeof(char));
+	QueueHCSR04Handle = xQueueCreate(10, sizeof(uint32_t)*10); // tao mot queue moi
+	QueueSoundSSHandle = xQueueCreate(10, sizeof(char) * 10);
+	QueueKeyboardHandle = xQueueCreate(10, sizeof(char) * 10);
+
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
   /* definition and creation of HCSR04_Sensor */
-  osThreadDef(HCSR04_Sensor, HCSR04, osPriorityRealtime, 0, 128);
+  osThreadDef(HCSR04_Sensor, HCSR04, osPriorityHigh, 0, 512);
   HCSR04_SensorHandle = osThreadCreate(osThread(HCSR04_Sensor), NULL);
 
   /* definition and creation of Sound_Sensor */
-  osThreadDef(Sound_Sensor, Read_SoundSS, osPriorityHigh, 0, 128);
+  osThreadDef(Sound_Sensor, Read_SoundSS, osPriorityAboveNormal, 0, 128);
   Sound_SensorHandle = osThreadCreate(osThread(Sound_Sensor), NULL);
 
   /* definition and creation of Task_Keyboard */
-  osThreadDef(Task_Keyboard, Keyboard, osPriorityNormal, 0, 128);
+  osThreadDef(Task_Keyboard, Keyboard, osPriorityBelowNormal, 0, 128);
   Task_KeyboardHandle = osThreadCreate(osThread(Task_Keyboard), NULL);
 
   /* definition and creation of Task_Display_LC */
-  osThreadDef(Task_Display_LC, Display_LCD, osPriorityBelowNormal, 0, 128);
+  osThreadDef(Task_Display_LC, Display_LCD, osPriorityLow, 0, 128);
   Task_Display_LCHandle = osThreadCreate(osThread(Task_Display_LC), NULL);
 
   /* definition and creation of taskUART */
-  osThreadDef(taskUART, UART, osPriorityAboveNormal, 0, 128);
+  osThreadDef(taskUART, UART, osPriorityNormal, 0, 128);
   taskUARTHandle = osThreadCreate(osThread(taskUART), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -372,7 +379,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : PB12 PB13 PB14 PB15 */
   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA9 */
@@ -411,9 +418,10 @@ void HCSR04(void const * argument)
   {
 		sr04_trigger(&sr04);
     khoang_cach = sr04.distance;
-		snprintf(message, 50, "Distance: %.2fcm", khoang_cach);
-		xQueueSend(QueueHCSR04Handle, &message, portMAX_DELAY);
-    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(HCSR04_PERIOD_MS));
+		snprintf(message, 50, "Distance: %.1fmm", khoang_cach);
+		
+		xQueueSend(QueueHCSR04Handle, &message, 100);
+    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
   }
   /* USER CODE END 5 */
 }
@@ -435,14 +443,15 @@ void Read_SoundSS(void const * argument)
   {
 		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_10) == 0){
 			// co am thanh
-			strcpy(message, "YES");
-			xQueueSend(QueueSoundSSHandle, &message, portMAX_DELAY);
+		
+			strcpy(message, "YES ");
+			xQueueSend(QueueSoundSSHandle, &message, 100);
 			sound = 3;
 		}
 		else {
 			// khong co am thanh
-			strcpy(message, "NO");
-			xQueueSend(QueueSoundSSHandle, &message, portMAX_DELAY);
+			strcpy(message, "NO  ");
+			xQueueSend(QueueSoundSSHandle, &message, 100);
 			sound = 8;
 		}
     osDelayUntil(&xLastWakeTime1, pdMS_TO_TICKS(SOUNDSS_PERIOD_MS));
@@ -462,12 +471,16 @@ void Keyboard(void const * argument)
 {
   /* USER CODE BEGIN Keyboard */
 	TickType_t xLastWakeTime2 = osKernelSysTick();
+	char key_val;
+	char buffer[20];
   /* Infinite loop */
   for(;;)
   {
 		// Xu ly task doc Keyboard
+		key_val = keypad_get_key_value();
+		sprintf(buffer, "Ky tu: %c", key_val);
+		xQueueSend(QueueKeyboardHandle, &buffer, 100);
     osDelayUntil(&xLastWakeTime2, pdMS_TO_TICKS(KEYBOARD_PERIOD_MS));
-		xLastWakeTime2 = osKernelSysTick();
   }
   /* USER CODE END Keyboard */
 }
@@ -483,20 +496,25 @@ void Display_LCD(void const * argument)
 {
   /* USER CODE BEGIN Display_LCD */
 	TickType_t xLastWakeTime = osKernelSysTick();
-	char buf[50];
-	char buf1[10];
+	
   /* Infinite loop */
   for(;;)
   {
+		char buf[50];
+		char buf1[10] = "    ";
+		char buf2[10];
 		// Xu ly task hien thi LCD
 		xQueueReceive(QueueHCSR04Handle, buf, portMAX_DELAY);
 		xQueueReceive(QueueSoundSSHandle, buf1, portMAX_DELAY);
-		lcd_put_cur(0, 0);
-		lcd_send_string(buf, sizeof(buf));
-		lcd_put_cur(1, 0);
-		lcd_send_string(buf1, sizeof(buf));
+		xQueueReceive(QueueKeyboardHandle, buf2, portMAX_DELAY);
+		LCD_SetCursor(1, 1);
+		LCD_Send_String(buf, STR_NOSLIDE);
+		LCD_SetCursor(2, 1);
+		LCD_Send_String(buf1, STR_NOSLIDE);
+		LCD_SetCursor(2, 7);
+		LCD_Send_String(buf2, STR_NOSLIDE);  
+		
     osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(LCD_PERIOD_MS));
-		xLastWakeTime = osKernelSysTick();
   }
   /* USER CODE END Display_LCD */
 }
