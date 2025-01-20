@@ -32,6 +32,7 @@
 #include "lcd_i2cModule.h"
 #include "keypad_4x4.h"
 #include "string.h"
+#include "uart.h"
 
 /* USER CODE END Includes */
 
@@ -72,6 +73,8 @@ I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
 
+UART_HandleTypeDef huart2;
+
 osThreadId HCSR04_SensorHandle;
 osThreadId Sound_SensorHandle;
 osThreadId Task_KeyboardHandle;
@@ -88,6 +91,7 @@ uint8_t check = 0;
 QueueHandle_t QueueHCSR04Handle; // khoi tao mot Queue (tuong tu de khoi tao mot task thi ta co lenh: TaskHandle_t)
 QueueHandle_t QueueSoundSSHandle;
 QueueHandle_t QueueKeyboardHandle;
+QueueHandle_t QueueUARTHandle;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,6 +99,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_USART2_UART_Init(void);
 void HCSR04(void const * argument);
 void Read_SoundSS(void const * argument);
 void Keyboard(void const * argument);
@@ -140,6 +145,7 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   MX_TIM1_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 	
 	//Init HCSR04
@@ -175,12 +181,13 @@ int main(void)
 	QueueHCSR04Handle = xQueueCreate(10, sizeof(uint32_t)*10); // tao mot queue moi
 	QueueSoundSSHandle = xQueueCreate(10, sizeof(char) * 10);
 	QueueKeyboardHandle = xQueueCreate(10, sizeof(char) * 10);
+	QueueUARTHandle = xQueueCreate(10, sizeof(uint32_t) * 10);
 
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
   /* definition and creation of HCSR04_Sensor */
-  osThreadDef(HCSR04_Sensor, HCSR04, osPriorityHigh, 0, 512);
+  osThreadDef(HCSR04_Sensor, HCSR04, osPriorityHigh, 0, 128);
   HCSR04_SensorHandle = osThreadCreate(osThread(HCSR04_Sensor), NULL);
 
   /* definition and creation of Sound_Sensor */
@@ -350,6 +357,39 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -360,8 +400,8 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_10|GPIO_PIN_11, GPIO_PIN_RESET);
@@ -421,6 +461,7 @@ void HCSR04(void const * argument)
 		snprintf(message, 50, "Distance: %.1fmm", khoang_cach);
 		
 		xQueueSend(QueueHCSR04Handle, &message, 100);
+		xQueueSend(QueueUARTHandle, &message, 100);
     osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
   }
   /* USER CODE END 5 */
@@ -446,13 +487,13 @@ void Read_SoundSS(void const * argument)
 		
 			strcpy(message, "YES ");
 			xQueueSend(QueueSoundSSHandle, &message, 100);
-			sound = 3;
+			// xQueueSend(QueueUARTHandle, &message, 100);
 		}
 		else {
 			// khong co am thanh
 			strcpy(message, "NO  ");
 			xQueueSend(QueueSoundSSHandle, &message, 100);
-			sound = 8;
+			xQueueSend(QueueUARTHandle, &message, 100);
 		}
     osDelayUntil(&xLastWakeTime1, pdMS_TO_TICKS(SOUNDSS_PERIOD_MS));
 		
@@ -480,6 +521,7 @@ void Keyboard(void const * argument)
 		key_val = keypad_get_key_value();
 		sprintf(buffer, "Ky tu: %c", key_val);
 		xQueueSend(QueueKeyboardHandle, &buffer, 100);
+		xQueueSend(QueueUARTHandle, &buffer, 100);
     osDelayUntil(&xLastWakeTime2, pdMS_TO_TICKS(KEYBOARD_PERIOD_MS));
   }
   /* USER CODE END Keyboard */
@@ -529,11 +571,17 @@ void Display_LCD(void const * argument)
 void UART(void const * argument)
 {
   /* USER CODE BEGIN UART */
+	char uart_buf[100];
 	TickType_t xLastWakeTime = osKernelSysTick();
   /* Infinite loop */
   for(;;)
   {
 		// Xu ly task truyen thong tin len may tinh su dung USB to TTL CP2102
+		 if (xQueueReceive(QueueUARTHandle, uart_buf, portMAX_DELAY) == pdPASS)
+        {
+					strcat(uart_buf, "\n");
+            HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, strlen(uart_buf), HAL_MAX_DELAY);
+        }
     osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(UART_PERIOD_MS));
 		
   }
