@@ -29,6 +29,8 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "i2c-lcd.h"
+#include "string.h"
 
 /* USER CODE END Includes */
 
@@ -44,6 +46,18 @@
 #define KEYBOARD_PERIOD_MS 100
 #define LCD_PERIOD_MS 250
 #define UART_PERIOD_MS 50
+
+#define HCSR04_DEADLINE_MS 50
+#define SOUNDSS_DEADLINE_MS 50
+#define KEYBOARD_DEADLINE_MS 100
+#define LCD_DEADLINE_MS 250
+#define UART_DEADLINE_MS 50
+
+#define HCSR04_EXCUTION_MS 3
+#define SOUNDSS_EXCUTION_MS 1
+#define KEYBOARD_EXCUTION_MS 3
+#define LCD_EXCUTION_MS 10
+#define UART_EXCUTION_MS 5
 
 /* USER CODE END PD */
 
@@ -126,11 +140,16 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
+	
+	//Init HCSR04
   sr04.trig_port = GPIOA;
   sr04.trig_pin = GPIO_PIN_9;
   sr04.echo_htim = &htim1;
   sr04.echo_channel = TIM_CHANNEL_1;
   sr04_init(&sr04);
+	
+	  //Init lcd
+		lcd_init();
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -392,9 +411,9 @@ void HCSR04(void const * argument)
   {
 		sr04_trigger(&sr04);
     khoang_cach = sr04.distance;
-		snprintf(message, 50, "Distance: %.2f cm", khoang_cach);
-		// xQueueSend(QueueHCSR04Handle, &message, portMAX_DELAY);
-    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(500));
+		snprintf(message, 50, "Distance: %.2fcm", khoang_cach);
+		xQueueSend(QueueHCSR04Handle, &message, portMAX_DELAY);
+    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(HCSR04_PERIOD_MS));
   }
   /* USER CODE END 5 */
 }
@@ -410,16 +429,20 @@ void Read_SoundSS(void const * argument)
 {
   /* USER CODE BEGIN Read_SoundSS */
 	TickType_t xLastWakeTime1 = osKernelSysTick();
+	char message[10];
   /* Infinite loop */
   for(;;)
   {
-		check = 10;
 		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_10) == 0){
 			// co am thanh
+			strcpy(message, "YES");
+			xQueueSend(QueueSoundSSHandle, &message, portMAX_DELAY);
 			sound = 3;
 		}
 		else {
 			// khong co am thanh
+			strcpy(message, "NO");
+			xQueueSend(QueueSoundSSHandle, &message, portMAX_DELAY);
 			sound = 8;
 		}
     osDelayUntil(&xLastWakeTime1, pdMS_TO_TICKS(SOUNDSS_PERIOD_MS));
@@ -460,10 +483,18 @@ void Display_LCD(void const * argument)
 {
   /* USER CODE BEGIN Display_LCD */
 	TickType_t xLastWakeTime = osKernelSysTick();
+	char buf[50];
+	char buf1[10];
   /* Infinite loop */
   for(;;)
   {
 		// Xu ly task hien thi LCD
+		xQueueReceive(QueueHCSR04Handle, buf, portMAX_DELAY);
+		xQueueReceive(QueueSoundSSHandle, buf1, portMAX_DELAY);
+		lcd_put_cur(0, 0);
+		lcd_send_string(buf, sizeof(buf));
+		lcd_put_cur(1, 0);
+		lcd_send_string(buf1, sizeof(buf));
     osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(LCD_PERIOD_MS));
 		xLastWakeTime = osKernelSysTick();
   }
