@@ -16,4 +16,6 @@
 Đa nhiệm:
 
 > - RMS
-> - EDF
+> - Round_robin
+
+=> Thông tin lý thuyết sẽ được lưu trong từng Folder
