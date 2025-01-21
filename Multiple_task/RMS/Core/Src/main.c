@@ -487,7 +487,7 @@ void Read_SoundSS(void const * argument)
 		
 			strcpy(message, "YES ");
 			xQueueSend(QueueSoundSSHandle, &message, 100);
-			// xQueueSend(QueueUARTHandle, &message, 100);
+			xQueueSend(QueueUARTHandle, &message, 100);
 		}
 		else {
 			// khong co am thanh
