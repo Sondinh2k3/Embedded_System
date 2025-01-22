@@ -299,9 +299,9 @@ int main(void)
             // T4: LCD
             handleLCD();
 				} else if (current_time >= T1 + T2 + T5 + T4 && current_time < 50) {
-            HAL_Delay(19);
+            HAL_Delay(19); }
 				// 50
-					if (current_time >= f && current_time < f+ T1 ) {
+					else if (current_time >= f && current_time < f+ T1 ) {
             // T1: HCSR04
             handleHCSR04();
         } else if (current_time >= f + T1 && current_time < f + T1 + T2) {
@@ -311,9 +311,9 @@ int main(void)
             // T5: UART
 					handleUART();
 				} else if (current_time >= f + T1 + T2 + T5 && current_time < 2*f) {
-            HAL_Delay(35);
-        //100
-        if (current_time >= 2*f && current_time < 2*f+ T1 ) {
+            HAL_Delay(35); }
+        //100 
+        else if (current_time >= 2*f && current_time < 2*f+ T1 ) {
             // T1: HCSR04
             handleHCSR04();
         } else if (current_time >= 2*f + T1 && current_time < 2*f + T1 + T2) {
@@ -326,10 +326,10 @@ int main(void)
             // T3: Keypad
             handleKeypad();
 				} else if (current_time >= 2*f + T1 + T2 + T5 +T3 && current_time < 2*f + T1 + T2 + T5 +T3 + 126) {
-            HAL_Delay(126);
-	      if (current_time >= 2*f + T1 + T2 + T5 +T3 + 126 && current_time < 2*f + 2*T1 + T2 + T5 +T3 + 126 ) {
+            HAL_Delay(126); 
+	      } else if (current_time >= 2*f + T1 + T2 + T5 +T3 + 126 && current_time < 2*f + 2*T1 + T2 + T5 +T3 + 126 ) {
             // T1: HCSR04
-            handleHCSR04();
+            handleHCSR04(); 
         } else if (current_time >= 2*f + 2*T1 + T2 + T5 +T3 + 126 && current_time < 2*f + 2*T1 + 2*T2 + T5 +T3 + 126) {
             // T2: SoundSensor
             handleSoundSensor();
@@ -337,7 +337,7 @@ int main(void)
             // T5: UART
 					  handleUART();
 				//200
-				if (current_time >= 4*f && current_time < 4*f+ T1 ) {
+				} else if (current_time >= 4*f && current_time < 4*f+ T1 ) {
             // T1: HCSR04
             handleHCSR04();
         } else if (current_time >= 4*f + T1 && current_time < 4*f + T1 + T2) {
@@ -349,7 +349,7 @@ int main(void)
 				} else if (current_time >= 4*f + T1 + T2 + T5 && current_time < 5*f) {
             HAL_Delay(35);
 			  //250
-				if (current_time < 5*f+T1) {
+				} else if (current_time < 5*f+T1) {
             // T1: HCSR04
             handleHCSR04();
         } else if (current_time >= 5*f+T1 && current_time < 5*f+T1 + T2) {
@@ -366,7 +366,7 @@ int main(void)
 
 				//300
 					
-				if (current_time >= 6*f && current_time < 6*f+ T1 ) {
+				} else if (current_time >= 6*f && current_time < 6*f+ T1 ) {
             // T1: HCSR04
             handleHCSR04();
         } else if (current_time >= 6*f + T1 && current_time < 6*f + T1 + T2) {
@@ -378,7 +378,7 @@ int main(void)
 				} else if (current_time >= 6*f + T1 + T2 + T5 && current_time < 7*f) {
             HAL_Delay(35);
 				//350
-				if (current_time >= 7*f && current_time < 7*f+ T1 ) {
+				} else if (current_time >= 7*f && current_time < 7*f+ T1 ) {
             // T1: HCSR04
             handleHCSR04();
         } else if (current_time >=7*f + T1 && current_time < 7*f + T1 + T2) {
@@ -390,7 +390,7 @@ int main(void)
 				} else if (current_time >= 7*f + T1 + T2 + T5 && current_time < 8*f) {
             HAL_Delay(35);	
 				//400
-					if (current_time >= 8*f && current_time < 8*f+ T1 ) {
+				} else if (current_time >= 8*f && current_time < 8*f+ T1 ) {
             // T1: HCSR04
             handleHCSR04();
         } else if (current_time >=8*f + T1 && current_time < 8*f + T1 + T2) {
@@ -402,7 +402,7 @@ int main(void)
 				} else if (current_time >= 8*f + T1 + T2 + T5 && current_time < 9*f) {
             HAL_Delay(35);	
 				//450
-				if (current_time >= 9*f && current_time < 9*f+ T1 ) {
+				} else if (current_time >= 9*f && current_time < 9*f+ T1 ) {
             // T1: HCSR04
             handleHCSR04();
         } else if (current_time >=9*f + T1 && current_time < 9*f + T1 + T2) {
@@ -412,7 +412,8 @@ int main(void)
             // T5: UART
 					handleUART();
 				} else if (current_time >= 9*f + T1 + T2 + T5 && current_time < TOTAL_CYCLE_MS) {
-            HAL_Delay(35);	
+            HAL_Delay(35);
+        }					
 				//500
 				if (current_time >= TOTAL_CYCLE_MS) {
             current_time = 0;  // Reset current_time về 0 để bắt đầu chu kỳ mới
