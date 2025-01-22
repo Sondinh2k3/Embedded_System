@@ -125,7 +125,8 @@ uint8_t *EU_getNextWord(uint16_t *size){
   * @retval None
   */
 uint8_t index_port=0;
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+/*
+__weak void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 #if MULTI_PORT
 	if(huart!=(*port_read).port){
 		while(huart!=ports[index_port].port)	index_port=(index_port+1)%N_MULTI_PORT;
@@ -145,6 +146,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	}
 	HAL_UART_Receive_IT((*port_read).port, &(*port_read).inChar, 1);
 }
+*/
 
 
 

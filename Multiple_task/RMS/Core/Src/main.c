@@ -88,6 +88,20 @@ float khoang_cach = 0;
 uint8_t sound = 0;
 uint8_t check = 0;
 
+uint32_t a = 0;
+uint32_t b = 0;
+uint32_t c = 0;
+uint32_t d = 0;
+uint32_t e = 0;
+
+uint32_t HCSR04_Period_ms = 50;
+uint32_t SoundSS_Period_ms = 50;
+uint32_t Keypad_Period_ms = 500;
+uint32_t LCD_Period_ms = 250;
+uint32_t UART_Period_ms = 50;
+
+uint8_t UART_Recv[5];
+
 QueueHandle_t QueueHCSR04Handle; // khoi tao mot Queue (tuong tu de khoi tao mot task thi ta co lenh: TaskHandle_t)
 QueueHandle_t QueueSoundSSHandle;
 QueueHandle_t QueueKeyboardHandle;
@@ -162,6 +176,8 @@ int main(void)
 		
 		// Init Keypad
 		keypad_init();
+		
+		HAL_UART_Receive_IT(&huart2, UART_Recv, sizeof(UART_Recv) - 1);
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -456,13 +472,14 @@ void HCSR04(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		a++;
 		sr04_trigger(&sr04);
     khoang_cach = sr04.distance;
 		snprintf(message, 50, "Distance: %.1fmm", khoang_cach);
 		
 		xQueueSend(QueueHCSR04Handle, &message, 100);
 		xQueueSend(QueueUARTHandle, &message, 100);
-    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(HCSR04_PERIOD_MS));
+    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(HCSR04_Period_ms));
   }
   /* USER CODE END 5 */
 }
@@ -482,6 +499,7 @@ void Read_SoundSS(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		b++;
 		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_10) == 0){
 			// co am thanh
 		
@@ -495,7 +513,7 @@ void Read_SoundSS(void const * argument)
 			xQueueSend(QueueSoundSSHandle, &message, 100);
 			xQueueSend(QueueUARTHandle, &message, 100);
 		}
-    osDelayUntil(&xLastWakeTime1, pdMS_TO_TICKS(SOUNDSS_PERIOD_MS));
+    osDelayUntil(&xLastWakeTime1, pdMS_TO_TICKS(SoundSS_Period_ms));
 		
   }
   /* USER CODE END Read_SoundSS */
@@ -517,12 +535,14 @@ void Keyboard(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		c++;
 		// Xu ly task doc Keyboard
 		key_val = keypad_get_key_value();
 		sprintf(buffer, "Ky tu: %c", key_val);
+		
 		xQueueSend(QueueKeyboardHandle, &buffer, 100);
 		xQueueSend(QueueUARTHandle, &buffer, 100);
-    osDelayUntil(&xLastWakeTime2, pdMS_TO_TICKS(KEYBOARD_PERIOD_MS));
+    osDelayUntil(&xLastWakeTime2, pdMS_TO_TICKS(Keypad_Period_ms));
   }
   /* USER CODE END Keyboard */
 }
@@ -542,6 +562,7 @@ void Display_LCD(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		d++;
 		char buf[50];
 		char buf1[10] = "    ";
 		char buf2[10];
@@ -556,7 +577,7 @@ void Display_LCD(void const * argument)
 		LCD_SetCursor(2, 7);
 		LCD_Send_String(buf2, STR_NOSLIDE);  
 		
-    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(LCD_PERIOD_MS));
+    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(LCD_Period_ms));
   }
   /* USER CODE END Display_LCD */
 }
@@ -576,16 +597,54 @@ void UART(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		e++;
 		// Xu ly task truyen thong tin len may tinh su dung USB to TTL CP2102
 		 if (xQueueReceive(QueueUARTHandle, uart_buf, portMAX_DELAY) == pdPASS)
         {
 					strcat(uart_buf, "\n");
             HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, strlen(uart_buf), HAL_MAX_DELAY);
         }
-    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(UART_PERIOD_MS));
+    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(UART_Period_ms));
 		
   }
   /* USER CODE END UART */
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(huart);
+  if(huart->Instance == USART1){
+	 // rxData[sizeof(rxData) - 1] = '\0';
+	if (UART_Recv[0] == '1')
+	{
+		HCSR04_Period_ms = 50;
+		SoundSS_Period_ms = 50;
+		Keypad_Period_ms = 500;
+		LCD_Period_ms = 250;
+		UART_Period_ms = 50;
+	}
+	else if (UART_Recv[0] == '2')
+	{
+		HCSR04_Period_ms = 100;
+		SoundSS_Period_ms = 100;
+		Keypad_Period_ms = 1000;
+		LCD_Period_ms = 500;
+		UART_Period_ms = 100;
+	}
+	else
+	{
+		HCSR04_Period_ms = 150;
+		SoundSS_Period_ms = 150;
+		Keypad_Period_ms = 1500;
+		LCD_Period_ms = 1000;
+		UART_Period_ms = 150;
+	}
+ }
+
+  /* NOTE: This function should not be modified, when the callback is needed,
+           the HAL_UART_RxCpltCallback could be implemented in the user file
+   */
 }
 
 /**

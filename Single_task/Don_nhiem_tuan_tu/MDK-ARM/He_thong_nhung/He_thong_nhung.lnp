@@ -1,0 +1,28 @@
+--cpu Cortex-M3
+"he_thong_nhung\startup_stm32f103xb.o"
+"he_thong_nhung\keypad_4x4.o"
+"he_thong_nhung\lcd_i2cmodule.o"
+"he_thong_nhung\sr04.o"
+"he_thong_nhung\main.o"
+"he_thong_nhung\stm32f1xx_it.o"
+"he_thong_nhung\stm32f1xx_hal_msp.o"
+"he_thong_nhung\stm32f1xx_hal_gpio_ex.o"
+"he_thong_nhung\stm32f1xx_hal_i2c.o"
+"he_thong_nhung\stm32f1xx_hal.o"
+"he_thong_nhung\stm32f1xx_hal_rcc.o"
+"he_thong_nhung\stm32f1xx_hal_rcc_ex.o"
+"he_thong_nhung\stm32f1xx_hal_gpio.o"
+"he_thong_nhung\stm32f1xx_hal_dma.o"
+"he_thong_nhung\stm32f1xx_hal_cortex.o"
+"he_thong_nhung\stm32f1xx_hal_pwr.o"
+"he_thong_nhung\stm32f1xx_hal_flash.o"
+"he_thong_nhung\stm32f1xx_hal_flash_ex.o"
+"he_thong_nhung\stm32f1xx_hal_exti.o"
+"he_thong_nhung\stm32f1xx_hal_tim.o"
+"he_thong_nhung\stm32f1xx_hal_tim_ex.o"
+"he_thong_nhung\stm32f1xx_hal_uart.o"
+"he_thong_nhung\system_stm32f1xx.o"
+--strict --scatter "He_thong_nhung\He_thong_nhung.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "He_thong_nhung.map" -o He_thong_nhung\He_thong_nhung.axf

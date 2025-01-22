@@ -70,6 +70,12 @@
 /* Global variables */
 uint32_t currentTask = 0; // Task hi?n t?i trong vòng l?p round robin
 uint32_t taskStartTime = 0;
+
+uint32_t a = 0;
+uint32_t b = 0;
+uint32_t c = 0;
+uint32_t d = 0;
+uint32_t e = 0;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -459,6 +465,7 @@ void HCSR04(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		a++;
     sr04_trigger(&sr04);
     khoang_cach = sr04.distance;
 		snprintf(message, 50, "Distance: %.1fmm", khoang_cach);
@@ -483,6 +490,7 @@ void Soundss(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		b++;
     if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_10) == 0){
 			// co am thanh
 		xQueueSend(QueueSoundSSHandle, &message, 100);
@@ -516,6 +524,7 @@ void Keypad(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		c++;
     // Xu ly task doc Keyboard
 		key_val = keypad_get_key_value();
 		sprintf(buffer, "Ky tu: %c", key_val);
@@ -539,6 +548,7 @@ void LCD(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		d++;
     char buf[50];
 		char buf1[10] = "    ";
 		char buf2[10];
@@ -572,6 +582,7 @@ void UART(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		e++;
     // Xu ly task truyen thong tin len may tinh su dung USB to TTL CP2102
 		 if (xQueueReceive(QueueUARTHandle, uart_buf, portMAX_DELAY) == pdPASS)
         {
