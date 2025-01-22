@@ -45,21 +45,21 @@
 /* USER CODE BEGIN PD */
 #define HCSR04_PERIOD_MS 50
 #define SOUNDSS_PERIOD_MS 50
-#define KEYBOARD_PERIOD_MS 150
+#define KEYBOARD_PERIOD_MS 500
 #define LCD_PERIOD_MS 250
 #define UART_PERIOD_MS 50
 
 #define HCSR04_DEADLINE_MS 50
 #define SOUNDSS_DEADLINE_MS 50
-#define KEYBOARD_DEADLINE_MS 100
+#define KEYBOARD_DEADLINE_MS 500
 #define LCD_DEADLINE_MS 250
 #define UART_DEADLINE_MS 50
 
 #define HCSR04_EXCUTION_MS 3
 #define SOUNDSS_EXCUTION_MS 1
-#define KEYBOARD_EXCUTION_MS 3
-#define LCD_EXCUTION_MS 10
-#define UART_EXCUTION_MS 5
+#define KEYBOARD_EXCUTION_MS 50
+#define LCD_EXCUTION_MS 15
+#define UART_EXCUTION_MS 10
 
 /* USER CODE END PD */
 
@@ -195,11 +195,11 @@ int main(void)
   Sound_SensorHandle = osThreadCreate(osThread(Sound_Sensor), NULL);
 
   /* definition and creation of Task_Keyboard */
-  osThreadDef(Task_Keyboard, Keyboard, osPriorityBelowNormal, 0, 128);
+  osThreadDef(Task_Keyboard, Keyboard, osPriorityLow, 0, 128);
   Task_KeyboardHandle = osThreadCreate(osThread(Task_Keyboard), NULL);
 
   /* definition and creation of Task_Display_LC */
-  osThreadDef(Task_Display_LC, Display_LCD, osPriorityLow, 0, 128);
+  osThreadDef(Task_Display_LC, Display_LCD, osPriorityBelowNormal, 0, 128);
   Task_Display_LCHandle = osThreadCreate(osThread(Task_Display_LC), NULL);
 
   /* definition and creation of taskUART */
@@ -462,7 +462,7 @@ void HCSR04(void const * argument)
 		
 		xQueueSend(QueueHCSR04Handle, &message, 100);
 		xQueueSend(QueueUARTHandle, &message, 100);
-    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
+    osDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(HCSR04_PERIOD_MS));
   }
   /* USER CODE END 5 */
 }
